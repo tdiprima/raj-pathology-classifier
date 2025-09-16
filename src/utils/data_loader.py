@@ -18,7 +18,7 @@ def create_data_loaders_from_separate_datasets(
         tuple: (train_loader, val_loader)
     """
     pin_memory = torch.cuda.is_available()
-    
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,

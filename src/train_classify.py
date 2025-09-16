@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-from utils.data_loader import create_data_loaders
+from utils.data_loader import create_data_loaders_from_separate_datasets
 from utils.dataset import ImgDataset
 from utils.training import train_epoch, validate
 
@@ -16,19 +16,21 @@ def main():
     with open("../config.json", "r") as f:
         config = json.load(f)
 
-    ROOT = os.path.join("..", config["root"])  # expects data/class/xxx.png
+    TRAIN_ROOT = config["train_root"]
+    TEST_ROOT = config["test_root"]
     CLASSES = sorted(
-        [d.name for d in Path(ROOT).iterdir() if d.is_dir()]
-    )  # auto-detect
+        [d.name for d in Path(TRAIN_ROOT).iterdir() if d.is_dir()]
+    )  # auto-detect from train directory
     IMG_SIZE = tuple(config["img_size"])
     BATCH = config["batch_size"]
     EPOCHS = config["epochs"]
     LR = config["lr"]
 
-    # build dataset
-    dataset = ImgDataset(ROOT, CLASSES, img_size=IMG_SIZE, augment=True)
-    train_loader, val_loader = create_data_loaders(
-        dataset, config["train_split"], BATCH
+    # build separate datasets
+    train_dataset = ImgDataset(TRAIN_ROOT, CLASSES, img_size=IMG_SIZE, augment=True)
+    val_dataset = ImgDataset(TEST_ROOT, CLASSES, img_size=IMG_SIZE, augment=False)
+    train_loader, val_loader = create_data_loaders_from_separate_datasets(
+        train_dataset, val_dataset, BATCH
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

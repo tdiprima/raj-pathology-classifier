@@ -1,83 +1,15 @@
 # training script
 import json
 import os
-import random
-from glob import glob
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import torchvision.transforms as T
-from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 
-
-class ImgDataset(Dataset):
-    def __init__(self, root_dir, classes, img_size=(224, 224), augment=True):
-        self.samples = []
-        for cls in classes:
-            files = glob(os.path.join(root_dir, cls, "*"))
-            for f in files:
-                self.samples.append((f, classes.index(cls)))
-        self.img_size = img_size
-        self.augment = augment
-        self.transform_train = T.Compose(
-            [
-                T.Resize(img_size),
-                T.RandomHorizontalFlip(),
-                T.RandomRotation(15),
-                T.ToTensor(),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
-        self.transform_val = T.Compose(
-            [
-                T.Resize(img_size),
-                T.ToTensor(),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        p, label = self.samples[idx]
-        img = Image.open(p).convert("RGB")
-        img = self.transform_train(img) if self.augment else self.transform_val(img)
-        return img, label
-
-
-def train_epoch(model, loader, opt, loss_fn, device):
-    model.train()
-    total = 0
-    for imgs, lbls in tqdm(loader):
-        imgs, lbls = imgs.to(device), lbls.to(device)
-        preds = model(imgs)
-        loss = loss_fn(preds, lbls)
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-        total += loss.item()
-    return total / len(loader)
-
-
-def validate(model, loader, loss_fn, device):
-    model.eval()
-    total = 0
-    correct = 0
-    total_samples = 0
-    with torch.no_grad():
-        for imgs, lbls in loader:
-            imgs, lbls = imgs.to(device), lbls.to(device)
-            preds = model(imgs)
-            loss = loss_fn(preds, lbls)
-            total += loss.item()
-            correct += (preds.argmax(1) == lbls).sum().item()
-            total_samples += imgs.size(0)
-    return total / len(loader), correct / total_samples
+from utils.data_loader import create_data_loaders
+from utils.dataset import ImgDataset
+from utils.training import train_epoch, validate
 
 
 def main():
@@ -95,15 +27,8 @@ def main():
 
     # build dataset
     dataset = ImgDataset(ROOT, CLASSES, img_size=IMG_SIZE, augment=True)
-    random.shuffle(dataset.samples)
-    split = int(config["train_split"] * len(dataset))
-    train_ds = torch.utils.data.Subset(dataset, range(0, split))
-    val_ds = torch.utils.data.Subset(dataset, range(split, len(dataset)))
-    train_loader = DataLoader(
-        train_ds, batch_size=BATCH, shuffle=True, num_workers=4, pin_memory=True
-    )
-    val_loader = DataLoader(
-        val_ds, batch_size=BATCH, shuffle=False, num_workers=4, pin_memory=True
+    train_loader, val_loader = create_data_loaders(
+        dataset, config["train_split"], BATCH
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -1,5 +1,7 @@
 # evaluation script
 import json
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -15,8 +17,10 @@ from torchvision.datasets import ImageFolder
 with open("../config.json", "r") as f:
     config = json.load(f)
 
-VAL_DIR = config["root"]  # or "data_split/val" if you used split_data.py
-MODEL_PATH = "best_resnet.pth"
+VAL_DIR = os.path.join(
+    "..", config["root"]
+)  # or "data_split/val" if you used split_data.py
+MODEL_PATH = os.path.join("..", "best_resnet.pth")
 IMG_SIZE = tuple(config["img_size"])
 BATCH = config["batch_size"]
 

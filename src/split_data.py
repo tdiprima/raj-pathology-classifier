@@ -1,14 +1,15 @@
 # data split script
 import json
+import os
 import random
 import shutil
 from pathlib import Path
 
-with open("../../config.json", "r") as f:
+with open("../config.json", "r") as f:
     config = json.load(f)
 
-ROOT = config["root"]
-OUT = "data_split"
+ROOT = os.path.join("..", config["root"])
+OUT = os.path.join("..", "data_split")
 VAL_RATIO = config["val_split"]
 
 classes = [d.name for d in Path(ROOT).iterdir() if d.is_dir()]

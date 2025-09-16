@@ -84,7 +84,7 @@ def main():
     with open("../config.json", "r") as f:
         config = json.load(f)
 
-    ROOT = config["root"]  # expects data/class/xxx.png
+    ROOT = os.path.join("..", config["root"])  # expects data/class/xxx.png
     CLASSES = sorted(
         [d.name for d in Path(ROOT).iterdir() if d.is_dir()]
     )  # auto-detect
@@ -108,7 +108,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # model = models.resnet34(pretrained=True)
-    model = models.resnet34(weights='IMAGENET1K_V1')
+    model = models.resnet34(weights="IMAGENET1K_V1")
     model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
     model = model.to(device)
     loss_fn = nn.CrossEntropyLoss()
@@ -123,14 +123,14 @@ def main():
         )
         if acc > best_acc:
             best_acc = acc
-            torch.save(model.state_dict(), "best_resnet.pth")
+            torch.save(model.state_dict(), os.path.join("..", "best_resnet.pth"))
             print("Saved best_resnet.pth")
 
     # export to ONNX
     dummy = torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(device)
-    model.load_state_dict(torch.load("best_resnet.pth"))
+    model.load_state_dict(torch.load(os.path.join("..", "best_resnet.pth")))
     model.eval()
-    torch.onnx.export(model, dummy, "resnet.onnx", opset_version=11)
+    torch.onnx.export(model, dummy, os.path.join("..", "resnet.onnx"), opset_version=11)
     print("Exported resnet.onnx")
 
 

@@ -49,7 +49,7 @@ raj-pathology-classifier/
 1. Clone the repo:
 
    ```bash
-   git clone https://github.com/<your-username>/raj-pathology-classifier.git
+   git clone https://github.com/tdiprima/raj-pathology-classifier.git
    cd raj-pathology-classifier
    ```
 

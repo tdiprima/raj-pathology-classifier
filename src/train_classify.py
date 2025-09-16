@@ -35,6 +35,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # model = models.resnet34(pretrained=True)
+    # model = models.resnet34(weights=None)  # No pretrained weights
     model = models.resnet34(weights="IMAGENET1K_V1")
     model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
     model = model.to(device)

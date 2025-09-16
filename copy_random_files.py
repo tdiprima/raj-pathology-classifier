@@ -5,7 +5,8 @@ import random
 from pathlib import Path
 
 def copy_random_files():
-    source_dir = Path("/data/erich/raj/data/test")
+    # source_dir = Path("/data/erich/raj/data/test")
+    source_dir = Path("/data/erich/raj/data/test/400p-Acinar tissue/")
     dest_dir = Path("./data/classification")
     
     # Create destination directory if it doesn't exist

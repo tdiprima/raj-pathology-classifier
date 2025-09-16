@@ -5,41 +5,55 @@ from pathlib import Path
 
 
 def copy_random_files():
-    # source_dir = Path("/data/erich/raj/data/test")
-    source_dir = Path("/data/erich/raj/data/test/400p-Acinar tissue/")
-    dest_dir = Path("./data/classification")
+    source_dir = Path("/data/erich/raj/data/test/")
+    dest_dir = Path("../../data/classification")
 
     # Create destination directory if it doesn't exist
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get all files from source directory
+    # Check if source directory exists
     if not source_dir.exists():
         print(f"Error: Source directory {source_dir} does not exist")
         return
 
-    all_files = [f for f in source_dir.iterdir() if f.is_file()]
+    # Get all subdirectories in the source directory
+    subdirs = [d for d in source_dir.iterdir() if d.is_dir()]
 
-    if len(all_files) == 0:
-        print(f"Error: No files found in {source_dir}")
+    if len(subdirs) == 0:
+        print(f"Error: No subdirectories found in {source_dir}")
         return
 
-    if len(all_files) < 20:
-        print(f"Warning: Only {len(all_files)} files available, copying all of them")
-        files_to_copy = all_files
-    else:
-        files_to_copy = random.sample(all_files, 20)
+    print(f"Found {len(subdirs)} subdirectories in {source_dir}")
 
-    print(f"Copying {len(files_to_copy)} files from {source_dir} to {dest_dir}")
+    total_copied = 0
 
-    for file_path in files_to_copy:
-        try:
-            dest_file = dest_dir / file_path.name
-            shutil.copy2(file_path, dest_file)
-            print(f"Copied: {file_path.name}")
-        except Exception as e:
-            print(f"Error copying {file_path.name}: {e}")
+    # Iterate through each subdirectory
+    for subdir in subdirs:
+        print(f"Processing folder: {subdir.name}")
 
-    print("Copy operation completed")
+        # Get all files in this subdirectory
+        files_in_subdir = [f for f in subdir.iterdir() if f.is_file()]
+
+        if len(files_in_subdir) == 0:
+            print(f"  Warning: No files found in {subdir.name}")
+            continue
+
+        # Select 2 random files (or all files if less than 2)
+        files_to_copy = random.sample(files_in_subdir, min(2, len(files_in_subdir)))
+
+        print(f"  Copying {len(files_to_copy)} files from {subdir.name}")
+
+        # Copy selected files
+        for file_path in files_to_copy:
+            try:
+                dest_file = dest_dir / file_path.name
+                shutil.copy2(file_path, dest_file)
+                print(f"  Copied: {file_path.name}")
+                total_copied += 1
+            except Exception as e:
+                print(f"  Error copying {file_path.name}: {e}")
+
+    print(f"Copy operation completed. Total files copied: {total_copied}")
 
 
 if __name__ == "__main__":

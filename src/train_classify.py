@@ -81,9 +81,9 @@ def validate(model, loader, loss_fn, device):
 
 
 def main():
-    with open("config.json", "r") as f:
+    with open("../config.json", "r") as f:
         config = json.load(f)
-    
+
     ROOT = config["root"]  # expects data/class/xxx.png
     CLASSES = sorted(
         [d.name for d in Path(ROOT).iterdir() if d.is_dir()]

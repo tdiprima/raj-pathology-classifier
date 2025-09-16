@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
 # ---- config ----
-with open("config.json", "r") as f:
+with open("../config.json", "r") as f:
     config = json.load(f)
 
 VAL_DIR = config["root"]  # or "data_split/val" if you used split_data.py

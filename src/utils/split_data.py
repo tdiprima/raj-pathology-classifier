@@ -4,7 +4,7 @@ import random
 import shutil
 from pathlib import Path
 
-with open("config.json", "r") as f:
+with open("../../config.json", "r") as f:
     config = json.load(f)
 
 ROOT = config["root"]

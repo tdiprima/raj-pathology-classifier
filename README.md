@@ -118,7 +118,7 @@ Use `notebooks/explore_data.ipynb` for:
 
 ### 📌 Notes
 
-* Dataset is too large for GitHub → keep it local or use DVC / symlinks if needed.
+* Dataset is too large for GitHub → keep it local or use DVC (Data Version Control) / symlinks if needed.
 * All configs (paths, batch size, image size, epochs, LR) live in `config.json`.
 * Outputs (weights, plots) are gitignored.
 

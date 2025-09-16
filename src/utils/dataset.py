@@ -1,6 +1,7 @@
 import os
 from glob import glob
 
+import PIL
 import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset
@@ -37,6 +38,12 @@ class ImgDataset(Dataset):
 
     def __getitem__(self, idx):
         p, label = self.samples[idx]
-        img = Image.open(p).convert("RGB")
-        img = self.transform_train(img) if self.augment else self.transform_val(img)
-        return img, label
+        try:
+            img = Image.open(p).convert("RGB")
+            img = self.transform_train(img) if self.augment else self.transform_val(img)
+            return img, label
+        except (OSError, IOError, PIL.UnidentifiedImageError) as e:
+            # Skip corrupted or empty images by trying the next one
+            print(f"Warning: Skipping corrupted image {p}: {e}")
+            next_idx = (idx + 1) % len(self.samples)
+            return self.__getitem__(next_idx)

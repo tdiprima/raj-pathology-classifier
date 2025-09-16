@@ -1,4 +1,5 @@
 # training script
+import json
 import os
 import random
 from glob import glob
@@ -80,19 +81,22 @@ def validate(model, loader, loss_fn, device):
 
 
 def main():
-    ROOT = "data/classification"  # expects data/class/xxx.png
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    
+    ROOT = config["root"]  # expects data/class/xxx.png
     CLASSES = sorted(
         [d.name for d in Path(ROOT).iterdir() if d.is_dir()]
     )  # auto-detect
-    IMG_SIZE = (224, 224)
-    BATCH = 32
-    EPOCHS = 25
-    LR = 1e-4
+    IMG_SIZE = tuple(config["img_size"])
+    BATCH = config["batch_size"]
+    EPOCHS = config["epochs"]
+    LR = config["lr"]
 
     # build dataset
     dataset = ImgDataset(ROOT, CLASSES, img_size=IMG_SIZE, augment=True)
     random.shuffle(dataset.samples)
-    split = int(0.8 * len(dataset))
+    split = int(config["train_split"] * len(dataset))
     train_ds = torch.utils.data.Subset(dataset, range(0, split))
     val_ds = torch.utils.data.Subset(dataset, range(split, len(dataset)))
     train_loader = DataLoader(
@@ -103,7 +107,8 @@ def main():
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = models.resnet34(pretrained=True)
+    # model = models.resnet34(pretrained=True)
+    model = models.resnet34(weights='IMAGENET1K_V1')
     model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
     model = model.to(device)
     loss_fn = nn.CrossEntropyLoss()

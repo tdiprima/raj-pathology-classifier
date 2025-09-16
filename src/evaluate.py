@@ -1,4 +1,5 @@
 # evaluation script
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -11,10 +12,13 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
 # ---- config ----
-VAL_DIR = "data/classification"  # or "data_split/val" if you used split_data.py
+with open("config.json", "r") as f:
+    config = json.load(f)
+
+VAL_DIR = config["root"]  # or "data_split/val" if you used split_data.py
 MODEL_PATH = "best_resnet.pth"
-IMG_SIZE = (224, 224)
-BATCH = 32
+IMG_SIZE = tuple(config["img_size"])
+BATCH = config["batch_size"]
 
 # ---- dataset ----
 transform = T.Compose(
@@ -31,7 +35,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ---- rebuild model ----
 n_classes = len(val_ds.classes)
-model = models.resnet34(pretrained=False)
+# model = models.resnet34(pretrained=False)
+model = models.resnet34(weights=None)
 model.fc = nn.Linear(model.fc.in_features, n_classes)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model = model.to(device)

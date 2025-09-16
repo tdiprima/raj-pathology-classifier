@@ -43,12 +43,16 @@ def copy_random_files():
 
         print(f"  Copying {len(files_to_copy)} files from {subdir.name}")
 
-        # Copy selected files
+        # Create corresponding subdirectory in destination
+        dest_subdir = dest_dir / subdir.name
+        dest_subdir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy selected files to the appropriate subfolder
         for file_path in files_to_copy:
             try:
-                dest_file = dest_dir / file_path.name
+                dest_file = dest_subdir / file_path.name
                 shutil.copy2(file_path, dest_file)
-                print(f"  Copied: {file_path.name}")
+                print(f"  Copied: {file_path.name} -> {subdir.name}/")
                 total_copied += 1
             except Exception as e:
                 print(f"  Error copying {file_path.name}: {e}")

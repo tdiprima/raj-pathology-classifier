@@ -46,7 +46,7 @@ def copy_random_files():
         # Create corresponding subdirectory in destination
         dest_subdir = dest_dir / subdir.name
         dest_subdir.mkdir(parents=True, exist_ok=True)
-        
+
         # Copy selected files to the appropriate subfolder
         for file_path in files_to_copy:
             try:

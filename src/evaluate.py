@@ -2,6 +2,7 @@
 import json
 import os
 from glob import glob
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,19 +13,20 @@ import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as T
 from PIL import Image
-from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+from sklearn.metrics import (auc, classification_report, confusion_matrix,
+                             roc_curve)
 from sklearn.preprocessing import label_binarize
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import ImageFolder
+
 
 class SafeImageDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.samples = []
         self.classes = sorted(os.listdir(root_dir))
         for cls in self.classes:
-            cls_path = os.path.join(root_dir, cls)
+            cls_path = Path(root_dir) / cls
             if os.path.isdir(cls_path):
-                files = glob(os.path.join(cls_path, "*"))
+                files = glob(str(cls_path / "*"))
                 for f in files:
                     self.samples.append((f, self.classes.index(cls)))
         self.transform = transform
@@ -44,14 +46,15 @@ class SafeImageDataset(Dataset):
             next_idx = (idx + 1) % len(self.samples)
             return self.__getitem__(next_idx)
 
+
 # ---- config ----
 with open("../config.json", "r") as f:
     config = json.load(f)
 
-VAL_DIR = os.path.join(
-    "..", config["test_root"]
+VAL_DIR = Path(
+    f"../{config['test_root']}"
 )  # or "data_split/val" if you used split_data.py
-MODEL_PATH = os.path.join("..", "models", "best_resnet.pth")
+MODEL_PATH = Path("../models/best_resnet.pth")
 IMG_SIZE = tuple(config["img_size"])
 BATCH = config["batch_size"]
 
@@ -95,7 +98,9 @@ all_labels = np.array(all_labels)
 all_preds = np.array(all_preds)
 
 # Generate classification report
-class_report = classification_report(all_labels, all_preds, target_names=val_ds.classes, digits=3)
+class_report = classification_report(
+    all_labels, all_preds, target_names=val_ds.classes, digits=3
+)
 print("📊 Classification Report:")
 print(class_report)
 
@@ -110,9 +115,9 @@ if n_classes == 2:
     y_bin = np.column_stack([1 - y_bin, y_bin])
 
 # Compute ROC curve and AUC for each class
-fpr = dict()
-tpr = dict()
-roc_auc = dict()
+fpr = {}
+tpr = {}
+roc_auc = {}
 
 for i in range(n_classes):
     fpr[i], tpr[i], _ = roc_curve(y_bin[:, i], all_probs[:, i])
@@ -123,11 +128,11 @@ fpr["micro"], tpr["micro"], _ = roc_curve(y_bin.ravel(), all_probs.ravel())
 roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
 # ---- Save results to files ----
-results_dir = "evaluation_results"
-os.makedirs(results_dir, exist_ok=True)
+results_dir = "../outputs/evaluation_results"
+Path(results_dir).mkdir(parents=True, exist_ok=True)
 
 # Save classification report
-with open(os.path.join(results_dir, "classification_report.txt"), "w") as f:
+with Path(results_dir) / "classification_report.txt".open("w") as f:
     f.write("Classification Report\n")
     f.write("=" * 50 + "\n\n")
     f.write(class_report)
@@ -137,7 +142,7 @@ with open(os.path.join(results_dir, "classification_report.txt"), "w") as f:
     f.write(f"Class names: {val_ds.classes}\n")
 
 # Save AUC scores
-with open(os.path.join(results_dir, "auc_scores.txt"), "w") as f:
+with Path(results_dir) / "auc_scores.txt".open("w") as f:
     f.write("AUC Scores\n")
     f.write("=" * 30 + "\n\n")
     for i, class_name in enumerate(val_ds.classes):
@@ -145,8 +150,13 @@ with open(os.path.join(results_dir, "auc_scores.txt"), "w") as f:
     f.write(f"\nMicro-average AUC: {roc_auc['micro']:.4f}\n")
 
 # Save confusion matrix data
-np.savetxt(os.path.join(results_dir, "confusion_matrix.csv"), cm, delimiter=",", fmt="%d")
-np.savetxt(os.path.join(results_dir, "confusion_matrix_normalized.csv"), cm_norm, delimiter=",", fmt="%.4f")
+np.savetxt(Path(results_dir) / "confusion_matrix.csv", cm, delimiter=",", fmt="%d")
+np.savetxt(
+    Path(results_dir) / "confusion_matrix_normalized.csv",
+    cm_norm,
+    delimiter=",",
+    fmt="%.4f",
+)
 
 # ---- Plot confusion matrix ----
 plt.figure(figsize=(10, 8))
@@ -162,7 +172,7 @@ plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.title("Normalized Confusion Matrix")
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "confusion_matrix.png"), dpi=300, bbox_inches='tight')
+plt.savefig(Path(results_dir) / "confusion_matrix.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 # ---- Plot ROC curves ----
@@ -171,26 +181,36 @@ colors = plt.cm.Set1(np.linspace(0, 1, n_classes))
 
 # Plot ROC curve for each class
 for i, color in zip(range(n_classes), colors):
-    plt.plot(fpr[i], tpr[i], color=color, lw=2,
-             label=f'{val_ds.classes[i]} (AUC = {roc_auc[i]:.3f})')
+    plt.plot(
+        fpr[i],
+        tpr[i],
+        color=color,
+        lw=2,
+        label=f"{val_ds.classes[i]} (AUC = {roc_auc[i]:.3f})",
+    )
 
 # Plot micro-average ROC curve
-plt.plot(fpr["micro"], tpr["micro"],
-         label=f'Micro-average (AUC = {roc_auc["micro"]:.3f})',
-         color='deeppink', linestyle=':', linewidth=4)
+plt.plot(
+    fpr["micro"],
+    tpr["micro"],
+    label=f'Micro-average (AUC = {roc_auc["micro"]:.3f})',
+    color="deeppink",
+    linestyle=":",
+    linewidth=4,
+)
 
 # Plot random classifier line
-plt.plot([0, 1], [0, 1], 'k--', lw=2, label='Random Classifier')
+plt.plot([0, 1], [0, 1], "k--", lw=2, label="Random Classifier")
 
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('ROC Curves - Multi-class Classification')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves - Multi-class Classification")
 plt.legend(loc="lower right")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "roc_curves.png"), dpi=300, bbox_inches='tight')
+plt.savefig(Path(results_dir) / "roc_curves.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 # ---- Plot AUC bar chart ----
@@ -198,29 +218,34 @@ plt.figure(figsize=(10, 6))
 class_names = val_ds.classes
 auc_scores = [roc_auc[i] for i in range(n_classes)]
 
-bars = plt.bar(class_names, auc_scores, color=colors[:len(class_names)], alpha=0.7)
-plt.xlabel('Classes')
-plt.ylabel('AUC Score')
-plt.title('AUC Scores by Class')
+bars = plt.bar(class_names, auc_scores, color=colors[: len(class_names)], alpha=0.7)
+plt.xlabel("Classes")
+plt.ylabel("AUC Score")
+plt.title("AUC Scores by Class")
 plt.ylim([0, 1])
-plt.xticks(rotation=45, ha='right')
+plt.xticks(rotation=45, ha="right")
 
 # Add value labels on bars
 for bar, score in zip(bars, auc_scores):
-    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-             f'{score:.3f}', ha='center', va='bottom')
+    plt.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + 0.01,
+        f"{score:.3f}",
+        ha="center",
+        va="bottom",
+    )
 
-plt.grid(True, alpha=0.3, axis='y')
+plt.grid(True, alpha=0.3, axis="y")
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "auc_scores.png"), dpi=300, bbox_inches='tight')
+plt.savefig(Path(results_dir) / "auc_scores.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 print(f"\n📁 All results saved to '{results_dir}/' directory:")
-print(f"  - classification_report.txt")
-print(f"  - confusion_matrix.png")
-print(f"  - confusion_matrix.csv")
-print(f"  - confusion_matrix_normalized.csv")
-print(f"  - roc_curves.png")
-print(f"  - auc_scores.txt")
-print(f"  - auc_scores.png")
+print("  - classification_report.txt")
+print("  - confusion_matrix.png")
+print("  - confusion_matrix.csv")
+print("  - confusion_matrix_normalized.csv")
+print("  - roc_curves.png")
+print("  - auc_scores.txt")
+print("  - auc_scores.png")
 print(f"\n🎯 Micro-average AUC: {roc_auc['micro']:.4f}")

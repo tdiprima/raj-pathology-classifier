@@ -6,7 +6,7 @@ import torchvision.models as models
 model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, 10)  # match your 10 classes
 
-model.load_state_dict(torch.load('../models/best_resnet.pth'))
+model.load_state_dict(torch.load("../models/best_resnet.pth"))
 model.eval()
 
 # Ensure model accepts 224x224x3 input (standard for WSI patches)
@@ -16,17 +16,17 @@ print(f"Model output shape: {output.shape}")  # Should be [1, num_classes]
 
 try:
     scripted_model = torch.jit.script(model)
-    torch.jit.save(scripted_model, 'model_torchscript.pt')
+    torch.jit.save(scripted_model, "model_torchscript.pt")
     print("✅ Successfully scripted model")
 except Exception as e:
     print(f"❌ Script failed: {e}")
     # Method 2: Trace (fallback)
     traced_model = torch.jit.trace(model, test_input)
-    torch.jit.save(traced_model, 'model_torchscript.pt')
+    torch.jit.save(traced_model, "model_torchscript.pt")
     print("✅ Successfully traced model")
 
 # Validate the converted model
-loaded_model = torch.jit.load('model_torchscript.pt')
+loaded_model = torch.jit.load("model_torchscript.pt")
 with torch.no_grad():
     original_output = model(test_input)
     converted_output = loaded_model(test_input)

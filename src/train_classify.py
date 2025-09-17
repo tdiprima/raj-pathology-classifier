@@ -74,7 +74,9 @@ def main():
 
         if acc > best_acc:
             best_acc = acc
-            torch.save(model.state_dict(), os.path.join("..", "models", "best_resnet.pth"))
+            torch.save(
+                model.state_dict(), os.path.join("..", "models", "best_resnet.pth")
+            )
             save_msg = f"New best accuracy: {acc:.4f}! Saved best_resnet.pth"
             print("Saved best_resnet.pth")
             logger.info(save_msg)
@@ -88,7 +90,9 @@ def main():
     dummy = torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(device)
     model.load_state_dict(torch.load(os.path.join("..", "models", "best_resnet.pth")))
     model.eval()
-    torch.onnx.export(model, dummy, os.path.join("..", "models", "resnet.onnx"), opset_version=11)
+    torch.onnx.export(
+        model, dummy, os.path.join("..", "models", "resnet.onnx"), opset_version=11
+    )
     print("Exported resnet.onnx")
     logger.info("ONNX export completed successfully")
     logger.info(f"Training completed! Best validation accuracy: {best_acc:.4f}")

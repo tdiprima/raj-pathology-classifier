@@ -40,7 +40,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # ---- rebuild model ----
 n_classes = len(val_ds.classes)
 # model = models.resnet34(pretrained=False)
-model = models.resnet34(weights=None)
+model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, n_classes)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model = model.to(device)

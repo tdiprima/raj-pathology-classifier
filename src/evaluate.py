@@ -1,17 +1,47 @@
 # evaluation script
 import json
 import os
+from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
+import PIL
 import seaborn as sns
 import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as T
+from PIL import Image
 from sklearn.metrics import classification_report, confusion_matrix
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import ImageFolder
+
+class SafeImageDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.samples = []
+        self.classes = sorted(os.listdir(root_dir))
+        for cls in self.classes:
+            cls_path = os.path.join(root_dir, cls)
+            if os.path.isdir(cls_path):
+                files = glob(os.path.join(cls_path, "*"))
+                for f in files:
+                    self.samples.append((f, self.classes.index(cls)))
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        p, label = self.samples[idx]
+        try:
+            img = Image.open(p).convert("RGB")
+            if self.transform:
+                img = self.transform(img)
+            return img, label
+        except (OSError, IOError, PIL.UnidentifiedImageError) as e:
+            print(f"Warning: Skipping corrupted image {p}: {e}")
+            next_idx = (idx + 1) % len(self.samples)
+            return self.__getitem__(next_idx)
 
 # ---- config ----
 with open("../config.json", "r") as f:
@@ -32,7 +62,7 @@ transform = T.Compose(
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
-val_ds = ImageFolder(VAL_DIR, transform=transform)
+val_ds = SafeImageDataset(VAL_DIR, transform=transform)
 val_loader = DataLoader(val_ds, batch_size=BATCH, shuffle=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

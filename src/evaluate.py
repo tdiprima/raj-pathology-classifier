@@ -12,7 +12,8 @@ import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as T
 from PIL import Image
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+from sklearn.preprocessing import label_binarize
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import ImageFolder
 
@@ -77,24 +78,77 @@ model = model.to(device)
 model.eval()
 
 # ---- run evaluation ----
-all_preds, all_labels = [], []
+all_preds, all_labels, all_probs = [], [], []
 with torch.no_grad():
     for imgs, labels in val_loader:
         imgs, labels = imgs.to(device), labels.to(device)
-        preds = model(imgs).argmax(1)
+        outputs = model(imgs)
+        probs = torch.softmax(outputs, dim=1)
+        preds = outputs.argmax(1)
         all_preds.extend(preds.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
+        all_probs.extend(probs.cpu().numpy())
 
 # ---- metrics ----
-print("📊 Classification Report:")
-print(
-    classification_report(all_labels, all_preds, target_names=val_ds.classes, digits=3)
-)
+all_probs = np.array(all_probs)
+all_labels = np.array(all_labels)
+all_preds = np.array(all_preds)
 
+# Generate classification report
+class_report = classification_report(all_labels, all_preds, target_names=val_ds.classes, digits=3)
+print("📊 Classification Report:")
+print(class_report)
+
+# Confusion matrix
 cm = confusion_matrix(all_labels, all_preds, labels=range(n_classes))
 cm_norm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
 
-# ---- confusion matrix plot ----
+# ---- ROC Curves and AUC ----
+# Binarize labels for multiclass ROC
+y_bin = label_binarize(all_labels, classes=range(n_classes))
+if n_classes == 2:
+    y_bin = np.column_stack([1 - y_bin, y_bin])
+
+# Compute ROC curve and AUC for each class
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+
+for i in range(n_classes):
+    fpr[i], tpr[i], _ = roc_curve(y_bin[:, i], all_probs[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+
+# Compute micro-average ROC curve and AUC
+fpr["micro"], tpr["micro"], _ = roc_curve(y_bin.ravel(), all_probs.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+# ---- Save results to files ----
+results_dir = "evaluation_results"
+os.makedirs(results_dir, exist_ok=True)
+
+# Save classification report
+with open(os.path.join(results_dir, "classification_report.txt"), "w") as f:
+    f.write("Classification Report\n")
+    f.write("=" * 50 + "\n\n")
+    f.write(class_report)
+    f.write(f"\n\nModel: {MODEL_PATH}\n")
+    f.write(f"Test Dataset: {VAL_DIR}\n")
+    f.write(f"Number of classes: {n_classes}\n")
+    f.write(f"Class names: {val_ds.classes}\n")
+
+# Save AUC scores
+with open(os.path.join(results_dir, "auc_scores.txt"), "w") as f:
+    f.write("AUC Scores\n")
+    f.write("=" * 30 + "\n\n")
+    for i, class_name in enumerate(val_ds.classes):
+        f.write(f"{class_name}: {roc_auc[i]:.4f}\n")
+    f.write(f"\nMicro-average AUC: {roc_auc['micro']:.4f}\n")
+
+# Save confusion matrix data
+np.savetxt(os.path.join(results_dir, "confusion_matrix.csv"), cm, delimiter=",", fmt="%d")
+np.savetxt(os.path.join(results_dir, "confusion_matrix_normalized.csv"), cm_norm, delimiter=",", fmt="%.4f")
+
+# ---- Plot confusion matrix ----
 plt.figure(figsize=(10, 8))
 sns.heatmap(
     cm_norm,
@@ -108,5 +162,65 @@ plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.title("Normalized Confusion Matrix")
 plt.tight_layout()
-plt.savefig("confusion_matrix.png")
-# plt.show()  # Commented out for no-GUI server
+plt.savefig(os.path.join(results_dir, "confusion_matrix.png"), dpi=300, bbox_inches='tight')
+plt.close()
+
+# ---- Plot ROC curves ----
+plt.figure(figsize=(12, 8))
+colors = plt.cm.Set1(np.linspace(0, 1, n_classes))
+
+# Plot ROC curve for each class
+for i, color in zip(range(n_classes), colors):
+    plt.plot(fpr[i], tpr[i], color=color, lw=2,
+             label=f'{val_ds.classes[i]} (AUC = {roc_auc[i]:.3f})')
+
+# Plot micro-average ROC curve
+plt.plot(fpr["micro"], tpr["micro"],
+         label=f'Micro-average (AUC = {roc_auc["micro"]:.3f})',
+         color='deeppink', linestyle=':', linewidth=4)
+
+# Plot random classifier line
+plt.plot([0, 1], [0, 1], 'k--', lw=2, label='Random Classifier')
+
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curves - Multi-class Classification')
+plt.legend(loc="lower right")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig(os.path.join(results_dir, "roc_curves.png"), dpi=300, bbox_inches='tight')
+plt.close()
+
+# ---- Plot AUC bar chart ----
+plt.figure(figsize=(10, 6))
+class_names = val_ds.classes
+auc_scores = [roc_auc[i] for i in range(n_classes)]
+
+bars = plt.bar(class_names, auc_scores, color=colors[:len(class_names)], alpha=0.7)
+plt.xlabel('Classes')
+plt.ylabel('AUC Score')
+plt.title('AUC Scores by Class')
+plt.ylim([0, 1])
+plt.xticks(rotation=45, ha='right')
+
+# Add value labels on bars
+for bar, score in zip(bars, auc_scores):
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+             f'{score:.3f}', ha='center', va='bottom')
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.tight_layout()
+plt.savefig(os.path.join(results_dir, "auc_scores.png"), dpi=300, bbox_inches='tight')
+plt.close()
+
+print(f"\n📁 All results saved to '{results_dir}/' directory:")
+print(f"  - classification_report.txt")
+print(f"  - confusion_matrix.png")
+print(f"  - confusion_matrix.csv")
+print(f"  - confusion_matrix_normalized.csv")
+print(f"  - roc_curves.png")
+print(f"  - auc_scores.txt")
+print(f"  - auc_scores.png")
+print(f"\n🎯 Micro-average AUC: {roc_auc['micro']:.4f}")

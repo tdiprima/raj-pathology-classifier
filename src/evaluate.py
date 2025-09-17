@@ -51,7 +51,7 @@ with open("../config.json", "r") as f:
 VAL_DIR = os.path.join(
     "..", config["test_root"]
 )  # or "data_split/val" if you used split_data.py
-MODEL_PATH = os.path.join("..", "best_resnet.pth")
+MODEL_PATH = os.path.join("..", "models", "best_resnet.pth")
 IMG_SIZE = tuple(config["img_size"])
 BATCH = config["batch_size"]
 

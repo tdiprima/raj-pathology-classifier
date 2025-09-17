@@ -18,7 +18,7 @@ with open("../config.json", "r") as f:
     config = json.load(f)
 
 VAL_DIR = os.path.join(
-    "..", config["root"]
+    "..", config["test_root"]
 )  # or "data_split/val" if you used split_data.py
 MODEL_PATH = os.path.join("..", "best_resnet.pth")
 IMG_SIZE = tuple(config["img_size"])
@@ -79,4 +79,4 @@ plt.ylabel("True")
 plt.title("Normalized Confusion Matrix")
 plt.tight_layout()
 plt.savefig("confusion_matrix.png")
-plt.show()
+# plt.show()  # Commented out for no-GUI server

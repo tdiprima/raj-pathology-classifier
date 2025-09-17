@@ -51,9 +51,7 @@ class SafeImageDataset(Dataset):
 with open("../config.json", "r") as f:
     config = json.load(f)
 
-VAL_DIR = Path(
-    f"../{config['test_root']}"
-)  # or "data_split/val" if you used split_data.py
+VAL_DIR = Path(f"../{config['test_root']}")
 MODEL_PATH = Path("../models/best_resnet.pth")
 IMG_SIZE = tuple(config["img_size"])
 BATCH = config["batch_size"]

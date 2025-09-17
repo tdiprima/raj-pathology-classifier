@@ -2,15 +2,18 @@ import torch
 import torch.onnx
 import torchvision.models as models
 
-model = models.resnet50(weights="IMAGENET1K_V1")
+# Define your model architecture
+model = models.resnet50()
 
-# Step 2: Load the saved weights
+# Load the saved weights
 checkpoint = torch.load("../best_resnet.pth")
 model.load_state_dict(checkpoint)  # or checkpoint['model_state_dict'] if it's a dict
 model.eval()
 
+# Create dummy input with the correct shape
 dummy_input = torch.randn(1, 3, 224, 224)  # (batch_size, channels, height, width)
 
+# Export to ONNX
 torch.onnx.export(
     model,
     dummy_input,

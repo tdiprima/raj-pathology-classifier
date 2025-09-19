@@ -64,6 +64,7 @@ def main():
     best_acc = 0
     early_stop_patience = 5
     early_stop_counter = 0
+    best_model_state = None
     logger.info(f"Starting training for {EPOCHS} epochs")
 
     for epoch in range(1, EPOCHS + 1):
@@ -80,8 +81,9 @@ def main():
         if acc > best_acc:
             best_acc = acc
             early_stop_counter = 0
+            best_model_state = model.state_dict().copy()
             torch.save(
-                model.state_dict(), os.path.join("models", "DecaResNet_v2.pth")
+                best_model_state, os.path.join("models", "DecaResNet_v2.pth")
             )
             save_msg = f"New best accuracy: {acc:.4f}! Saved DecaResNet_v2.pth"
             print("Saved DecaResNet_v2.pth")
@@ -100,7 +102,8 @@ def main():
     # export to ONNX
     logger.info("Starting ONNX export")
     dummy = torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(device)
-    model.load_state_dict(torch.load(os.path.join("models", "DecaResNet_v2.pth")))
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
     model.eval()
     torch.onnx.export(
         model, dummy, os.path.join("models", "DecaResNet_v2.onnx"), opset_version=11

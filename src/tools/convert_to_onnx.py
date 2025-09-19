@@ -11,7 +11,7 @@ num_features = model.fc.in_features
 model.fc = torch.nn.Linear(num_features, 10)  # 10 classes instead of 1000
 
 # Load the saved weights
-checkpoint = torch.load("../models/best_resnet.pth")
+checkpoint = torch.load("../models/DecaResNet.pth")
 model.load_state_dict(checkpoint)  # Now the dimensions should match
 model.eval()  # Set to evaluation mode
 
@@ -22,7 +22,7 @@ dummy_input = torch.randn(1, 3, 224, 224)  # Adjust dimensions if needed
 torch.onnx.export(
     model,
     dummy_input,
-    "../models/resnet.onnx",
+    "../models/DecaResNet.onnx",
     export_params=True,
     opset_version=11,
     do_constant_folding=True,

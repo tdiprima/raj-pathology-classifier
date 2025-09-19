@@ -86,8 +86,8 @@ python src/train_classify.py
 ```
 
 * Automatically splits data into train/val (80/20).
-* Saves best model to `models/DecaResNet.pth` (PyTorch model)
-* Exports ONNX model to `models/DecaResNet.onnx` (ONNX model).
+* Saves best model to `models/DecaResNet_v2.pth` (PyTorch model)
+* Exports ONNX model to `models/DecaResNet_v2.onnx` (ONNX model).
 * TorchScript model => `models/DecaResnet.pt`
 
 You can tweak hyperparams in `config.json`.

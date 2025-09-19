@@ -57,10 +57,13 @@ def main():
     model = model.to(device)
     loss_fn = nn.CrossEntropyLoss()
     opt = torch.optim.Adam(model.parameters(), lr=LR)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=3, verbose=True)
 
     logger.info("Model initialized: ResNet50 with ImageNet pretrained weights")
 
     best_acc = 0
+    early_stop_patience = 5
+    early_stop_counter = 0
     logger.info(f"Starting training for {EPOCHS} epochs")
 
     for epoch in range(1, EPOCHS + 1):
@@ -68,39 +71,48 @@ def main():
         tr_loss = train_epoch(model, train_loader, opt, loss_fn, device)
         val_loss, acc = validate(model, val_loader, loss_fn, device)
 
+        scheduler.step(val_loss)
+
         epoch_msg = f"Epoch {epoch}: train_loss {tr_loss:.4f} val_loss {val_loss:.4f} val_acc {acc:.4f}"
         print(epoch_msg)
         logger.info(epoch_msg)
 
         if acc > best_acc:
             best_acc = acc
+            early_stop_counter = 0
             torch.save(
-                model.state_dict(), os.path.join("..", "models", "DecaResNet.pth")
+                model.state_dict(), os.path.join("..", "models", "DecaResNet_v2.pth")
             )
-            save_msg = f"New best accuracy: {acc:.4f}! Saved DecaResNet.pth"
-            print("Saved DecaResNet.pth")
+            save_msg = f"New best accuracy: {acc:.4f}! Saved DecaResNet_v2.pth"
+            print("Saved DecaResNet_v2.pth")
             logger.info(save_msg)
         else:
-            logger.info(f"Current accuracy {acc:.4f} < best accuracy {best_acc:.4f}")
+            early_stop_counter += 1
+            logger.info(f"Current accuracy {acc:.4f} < best accuracy {best_acc:.4f} (early stop counter: {early_stop_counter}/{early_stop_patience})")
+
+        if early_stop_counter >= early_stop_patience:
+            logger.info(f"Early stopping triggered after {epoch} epochs")
+            print(f"Early stopping triggered after {epoch} epochs")
+            break
 
         logger.info(f"Completed epoch {epoch}/{EPOCHS}")
 
     # export to ONNX
     logger.info("Starting ONNX export")
     dummy = torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(device)
-    model.load_state_dict(torch.load(os.path.join("..", "models", "DecaResNet.pth")))
+    model.load_state_dict(torch.load(os.path.join("..", "models", "DecaResNet_v2.pth")))
     model.eval()
     torch.onnx.export(
-        model, dummy, os.path.join("..", "models", "DecaResNet.onnx"), opset_version=11
+        model, dummy, os.path.join("..", "models", "DecaResNet_v2.onnx"), opset_version=11
     )
-    print("Exported DecaResNet.onnx")
+    print("Exported DecaResNet_v2.onnx")
     logger.info("ONNX export completed successfully")
 
     # export to TorchScript
     logger.info("Starting TorchScript export")
     traced_model = torch.jit.trace(model, dummy)
-    traced_model.save(os.path.join("..", "models", "DecaResNet.pt"))
-    print("Exported DecaResNet.pt")
+    traced_model.save(os.path.join("..", "models", "DecaResNet_v2.pt"))
+    print("Exported DecaResNet_v2.pt")
     logger.info("TorchScript export completed successfully")
     logger.info(f"Training completed! Best validation accuracy: {best_acc:.4f}")
 

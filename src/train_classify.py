@@ -15,7 +15,7 @@ from utils.training import train_epoch, validate
 
 def main():
     # Setup logging
-    logger.add("../training.log", rotation="10 MB", retention="7 days", level="INFO")
+    logger.add("training.log", rotation="10 MB", retention="7 days", level="INFO")
     logger.info("Starting training script")
 
     with open("../config.json", "r") as f:
@@ -81,7 +81,7 @@ def main():
             best_acc = acc
             early_stop_counter = 0
             torch.save(
-                model.state_dict(), os.path.join("..", "models", "DecaResNet_v2.pth")
+                model.state_dict(), os.path.join("models", "DecaResNet_v2.pth")
             )
             save_msg = f"New best accuracy: {acc:.4f}! Saved DecaResNet_v2.pth"
             print("Saved DecaResNet_v2.pth")
@@ -100,10 +100,10 @@ def main():
     # export to ONNX
     logger.info("Starting ONNX export")
     dummy = torch.randn(1, 3, IMG_SIZE[0], IMG_SIZE[1]).to(device)
-    model.load_state_dict(torch.load(os.path.join("..", "models", "DecaResNet_v2.pth")))
+    model.load_state_dict(torch.load(os.path.join("models", "DecaResNet_v2.pth")))
     model.eval()
     torch.onnx.export(
-        model, dummy, os.path.join("..", "models", "DecaResNet_v2.onnx"), opset_version=11
+        model, dummy, os.path.join("models", "DecaResNet_v2.onnx"), opset_version=11
     )
     print("Exported DecaResNet_v2.onnx")
     logger.info("ONNX export completed successfully")

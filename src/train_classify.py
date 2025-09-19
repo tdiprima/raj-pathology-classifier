@@ -91,10 +91,17 @@ def main():
     model.load_state_dict(torch.load(os.path.join("..", "models", "DecaResNet.pth")))
     model.eval()
     torch.onnx.export(
-        model, dummy, os.path.join("..", "models", "resnet.onnx"), opset_version=11
+        model, dummy, os.path.join("..", "models", "DecaResNet.onnx"), opset_version=11
     )
-    print("Exported resnet.onnx")
+    print("Exported DecaResNet.onnx")
     logger.info("ONNX export completed successfully")
+
+    # export to TorchScript
+    logger.info("Starting TorchScript export")
+    traced_model = torch.jit.trace(model, dummy)
+    traced_model.save(os.path.join("..", "models", "DecaResNet.pt"))
+    print("Exported DecaResNet.pt")
+    logger.info("TorchScript export completed successfully")
     logger.info(f"Training completed! Best validation accuracy: {best_acc:.4f}")
 
 

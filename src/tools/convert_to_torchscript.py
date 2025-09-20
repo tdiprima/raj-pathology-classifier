@@ -26,7 +26,7 @@ except Exception as e:
     print("✅ Successfully traced model")
 
 # Validate the converted model
-loaded_model = torch.jit.load("DecaResNet_v2.pt")
+loaded_model = torch.jit.load("../models/DecaResNet_v2.pt")
 with torch.no_grad():
     original_output = model(test_input)
     converted_output = loaded_model(test_input)

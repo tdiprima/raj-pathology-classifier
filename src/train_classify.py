@@ -114,7 +114,7 @@ def main():
     # export to TorchScript
     logger.info("Starting TorchScript export")
     traced_model = torch.jit.trace(model, dummy)
-    traced_model.save(os.path.join("..", "models", "DecaResNet_v2.pt"))
+    traced_model.save(os.path.join("models", "DecaResNet_v2.pt"))
     print("Exported DecaResNet_v2.pt")
     logger.info("TorchScript export completed successfully")
     logger.info(f"Training completed! Best validation accuracy: {best_acc:.4f}")
